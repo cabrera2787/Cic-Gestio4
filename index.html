@@ -1,19 +1,14 @@
 <!DOCTYPE html>
-<html lang="ca">
+<html lang="ca" class="scroll-smooth">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>CiC Gestió - Prototype</title>
-    
-    <!-- Tailwind CSS -->
+    <title>CiC Gestió - Arquitectura Tècnica</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
     
-    <!-- React & Router -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
@@ -21,39 +16,35 @@
     <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 
-    <!-- Tailwind Configuration -->
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#f28b45", 
-                        "primary-dark": "#d97332",
+                        "primary": "#d96c2c", 
+                        "primary-light": "#f28b45",
                         "secondary": "#1a1a1a",
-                        "dark": "#111111",
+                        "dark": "#0f0f0f",
                         "light": "#ffffff",
                         "off-white": "#f5f5f5",
-                        "stone-light": "#f5f5f4",
-                        "gray-text": "#666666",
+                        "gray-text": "#525252",
                     },
                     fontFamily: {
                         "display": ["Space Grotesk", "sans-serif"],
                         "body": ["Manrope", "sans-serif"],
                     },
                     borderRadius: {
-                        "DEFAULT": "0px",
-                        "lg": "0px",
-                        "xl": "0px",
-                        "2xl": "0px", 
+                        "DEFAULT": "0px", 
                     },
                     animation: {
-                        pulsedown: 'pulsedown 1.5s ease-in-out infinite',
+                        'fade-in': 'fadeIn 1s ease-out forwards',
+                        'fadeIn': 'fadeIn 0.3s ease-out',
                     },
                     keyframes: {
-                        pulsedown: {
-                            '0%': { transform: 'translateY(-100%)' },
-                            '100%': { transform: 'translateY(100%)' },
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
                         }
                     }
                 },
@@ -66,20 +57,33 @@
                 -webkit-text-stroke: 1px currentColor;
                 color: transparent;
             }
+            .text-outline-white {
+                -webkit-text-stroke: 1px white;
+                color: transparent;
+            }
             .grayscale-map {
                 filter: grayscale(100%) invert(92%) contrast(83%);
             }
         }
-        html {
-            scroll-behavior: smooth;
-        }
         ::selection {
-            background-color: #f28b45;
+            background-color: #d96c2c;
             color: white;
+        }
+        .modal-scroll::-webkit-scrollbar, .modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .modal-scroll::-webkit-scrollbar-track, .modal-content::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        .modal-scroll::-webkit-scrollbar-thumb, .modal-content::-webkit-scrollbar-thumb {
+            background: #d96c2c; 
+        }
+        .fixed-bg-effect {
+            background-attachment: fixed;
         }
     </style>
 </head>
-<body class="bg-light text-secondary font-body selection:bg-primary selection:text-white">
+<body class="bg-light text-secondary font-body antialiased selection:bg-primary selection:text-white">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -87,11 +91,10 @@
         const { createRoot } = ReactDOM;
         const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
 
-        // --- Common Components ---
+        // --- Shared Components ---
 
         const Navigation = ({ isTransparent = false }) => {
             const [scrolled, setScrolled] = useState(false);
-            const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
             const location = useLocation();
 
             useEffect(() => {
@@ -102,66 +105,71 @@
                 return () => window.removeEventListener('scroll', handleScroll);
             }, []);
 
-            // Logic to handle header style based on page type and scroll state
-            const isHomePage = location.pathname === '/';
-            
-            // On home page: transparent at top, solid black/dark on scroll
-            // On other pages: solid white/light at top and scroll
-            
-            let headerClass = "";
-            let textClass = "";
-            
-            if (isHomePage) {
+            // Determine header classes based on transparency prop and scroll state
+            let headerClasses = "fixed top-0 z-50 w-full transition-all duration-300 ";
+            if (isTransparent) {
                 if (scrolled) {
-                    headerClass = "bg-black/90 backdrop-blur-md py-4 border-b border-white/10";
-                    textClass = "text-white";
+                    headerClasses += "bg-secondary/90 backdrop-blur-md py-4 text-white";
                 } else {
-                    headerClass = "bg-transparent py-6";
-                    textClass = "text-white mix-blend-difference"; // Ensure visibility against hero
+                    headerClasses += "bg-transparent py-6 text-white mix-blend-difference";
                 }
             } else {
-                // Standard pages
-                headerClass = scrolled 
-                    ? "bg-white/95 backdrop-blur-md py-4 shadow-sm border-b border-gray-100" 
-                    : "bg-white/90 backdrop-blur-md py-4 border-b border-gray-100";
-                textClass = "text-secondary";
+                 // Solid header style (screens 1, 2, 4)
+                 if (scrolled) {
+                    headerClasses += "bg-white/95 backdrop-blur-md py-4 shadow-sm text-secondary";
+                 } else {
+                    headerClasses += "bg-white/90 py-5 border-b border-gray-100 text-secondary";
+                 }
             }
 
+            // Helper to determine link color
+            const linkClass = (path) => {
+                const isActive = location.pathname === path;
+                const base = "text-xs uppercase tracking-[0.2em] font-bold transition-all relative ";
+                
+                if (isTransparent && !scrolled) {
+                    // On transparent background
+                    return base + (isActive ? "text-primary-light after:w-full" : "hover:text-primary-light after:w-0 hover:after:w-full after:content-[''] after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:bg-primary-light after:transition-all");
+                } else {
+                    // On light/solid background
+                    return base + (isActive ? "text-primary border-b border-primary pb-1" : "text-secondary hover:text-primary");
+                }
+            };
+            
+            // Logo text color
+            const logoClass = (isTransparent && !scrolled) 
+                ? "text-2xl md:text-3xl font-display font-bold tracking-tighter group-hover:text-primary-light transition-colors text-white"
+                : "text-2xl md:text-3xl font-display font-bold tracking-tighter hover:opacity-80 transition-opacity text-secondary";
+            
+            const dotClass = (isTransparent && !scrolled) ? "text-primary-light" : "text-primary";
+
             return (
-                <header className={`fixed top-0 z-50 w-full transition-all duration-300 ${headerClass}`}>
-                    <div className="px-6 md:px-12 flex items-center justify-between mx-auto w-full max-w-[1600px]">
+                <header className={headerClasses} id="header">
+                    <div className="px-6 md:px-12 flex items-center justify-between mx-auto w-full max-w-[1800px]">
                         <div className="flex items-center gap-2">
-                            <Link to="/" className={`text-2xl md:text-3xl font-display font-bold tracking-tighter hover:opacity-80 transition-opacity ${textClass}`}>
-                                CiC Gestió<span className="text-primary">.</span>
+                            <Link to="/" className="group">
+                                <h2 className={logoClass}>CiC Gestió<span className={dotClass}>.</span></h2>
                             </Link>
                         </div>
                         <div className="hidden md:flex items-center">
                             <nav className="flex items-center gap-8 lg:gap-12">
-                                <Link to="/services" className={`text-sm uppercase tracking-widest font-bold hover:text-primary transition-colors ${textClass}`}>Serveis</Link>
-                                <Link to="/projects" className={`text-sm uppercase tracking-widest font-bold hover:text-primary transition-colors ${textClass}`}>Projectes</Link>
-                                <Link to="/contact" className={`text-sm uppercase tracking-widest font-bold hover:text-primary transition-colors ${textClass}`}>Contacte</Link>
+                                <Link to="/services" className={linkClass('/services')}>Serveis</Link>
+                                <Link to="/projects" className={linkClass('/projects')}>Projectes</Link>
+                                <Link to="/contact" className={linkClass('/contact')}>Contacte</Link>
                             </nav>
                         </div>
                         <div className="md:hidden">
-                            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className={`p-2 ${textClass}`}>
+                            <button className="p-2">
                                 <span className="material-symbols-outlined text-3xl">menu</span>
                             </button>
                         </div>
                     </div>
-                    {mobileMenuOpen && (
-                        <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-gray-200 p-6 flex flex-col gap-4 shadow-lg text-secondary">
-                            <Link to="/" onClick={() => setMobileMenuOpen(false)} className="text-sm uppercase font-bold">Inici</Link>
-                            <Link to="/services" onClick={() => setMobileMenuOpen(false)} className="text-sm uppercase font-bold">Serveis</Link>
-                            <Link to="/projects" onClick={() => setMobileMenuOpen(false)} className="text-sm uppercase font-bold">Projectes</Link>
-                            <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="text-sm uppercase font-bold">Contacte</Link>
-                        </div>
-                    )}
                 </header>
             );
         };
 
         const Footer = () => (
-            <footer className="bg-[#111111] text-white pt-20 pb-10 border-t border-white/10">
+            <footer className="bg-secondary text-white pt-20 pb-10 border-t border-white/5" id="contacte">
                 <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
                     <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-20">
                         <div className="max-w-xs">
@@ -169,595 +177,690 @@
                             <p className="text-gray-400 text-sm leading-relaxed mb-6">
                                 Estudi d'arquitectura tècnica especialitzat en direcció d'execució, control de qualitat i gestió integral de projectes.
                             </p>
+                            <div className="flex gap-4">
+                                <a href="#" className="w-10 h-10 border border-white/20 flex items-center justify-center hover:bg-primary hover:border-primary transition-colors text-white rounded-full">
+                                    <span className="font-bold text-xs">IN</span>
+                                </a>
+                                <a href="#" className="w-10 h-10 border border-white/20 flex items-center justify-center hover:bg-primary hover:border-primary transition-colors text-white rounded-full">
+                                    <span className="font-bold text-xs">IG</span>
+                                </a>
+                            </div>
                         </div>
-                        <div>
-                            <span className="text-primary font-bold text-sm uppercase tracking-widest block mb-4">Ubicació</span>
-                            <address className="not-italic text-gray-300 text-sm leading-relaxed">
-                                Carrer Oriol Martorell 16<br/>
-                                17003 Girona
-                            </address>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24 w-full lg:w-auto">
+                            <div>
+                                <span className="text-primary font-bold text-sm uppercase tracking-widest block mb-4">Ubicació</span>
+                                <address className="not-italic text-gray-300 text-sm leading-relaxed">
+                                    Carrer Oriol Martorell 16<br/>
+                                    17003 Girona
+                                </address>
+                            </div>
+                            <div>
+                                <span className="text-primary font-bold text-sm uppercase tracking-widest block mb-4">Contacte</span>
+                                <ul className="text-gray-300 text-sm space-y-2">
+                                    <li><a className="hover:text-white transition-colors" href="tel:+34606352726">606 35 27 26</a></li>
+                                    <li><a className="hover:text-white transition-colors" href="mailto:cabreramasferrer@gmail.com">cabreramasferrer@gmail.com</a></li>
+                                </ul>
+                            </div>
                         </div>
-                        <div>
-                            <span className="text-primary font-bold text-sm uppercase tracking-widest block mb-4">Contacte</span>
-                            <ul className="text-gray-300 text-sm space-y-2">
-                                <li><a href="#" className="hover:text-white transition-colors">606 35 27 26</a></li>
-                                <li><a href="#" className="hover:text-white transition-colors">cabreramasferrer@gmail.com</a></li>
-                                <li><a href="#" className="hover:text-white transition-colors">LinkedIn</a></li>
-                                <li><a href="#" className="hover:text-white transition-colors">Instagram</a></li>
-                            </ul>
-                        </div>
-                        <div className="border border-white/20 p-4 text-center min-w-[120px]">
-                            <span className="block text-2xl font-bold font-display">2023</span>
-                            <span className="block text-[10px] uppercase tracking-wider text-gray-400 mt-1">Premi Excel·lència</span>
+                        <div className="border border-white/20 p-4 text-center min-w-[120px] hidden lg:block">
+                            <span className="block text-2xl font-bold font-display">2024</span>
+                            <span className="block text-[10px] uppercase tracking-wider text-gray-400 mt-1">Excel·lència Tècnica</span>
                         </div>
                     </div>
                     <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
-                        <p>© 2024 Portfoli Arquitecte Tècnic. Tots els drets reservats.</p>
+                        <p>© 2024 CiC Gestió. Tots els drets reservats.</p>
                         <div className="flex gap-6">
-                            <a href="#" className="hover:text-white transition-colors">Política de Cookies</a>
-                            <a href="#" className="hover:text-white transition-colors">Avís Legal</a>
-                            <a href="#" className="hover:text-white transition-colors">Privacitat</a>
+                            <a className="hover:text-white transition-colors" href="#">Política de Cookies</a>
+                            <a className="hover:text-white transition-colors" href="#">Avís Legal</a>
+                            <a className="hover:text-white transition-colors" href="#">Privacitat</a>
                         </div>
                     </div>
                 </div>
-                <button 
-                    onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}
-                    className="fixed bottom-8 right-8 bg-[#222] p-3 text-primary hover:text-white transition-colors border border-primary/20 z-40 hidden md:block shadow-lg"
-                >
-                    <span className="material-symbols-outlined">expand_less</span>
-                </button>
             </footer>
         );
 
-        const CallToAction = () => (
-            <section className="w-full bg-off-white py-24 md:py-32 border-t border-gray-200">
-                <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12 flex flex-col items-center text-center">
-                    <h2 className="text-5xl md:text-7xl font-display font-bold text-secondary mb-8">
-                        Tens un projecte<br/>en ment?
-                    </h2>
-                    <p className="text-xl text-gray-600 mb-12 max-w-2xl">
-                        A <strong className="text-secondary">CiC Gestió</strong> t'oferim assessorament tècnic des del primer moment per garantir l'èxit de la teva obra.
-                    </p>
-                    <Link to="/contact" className="inline-flex items-center gap-3 bg-primary text-white px-12 py-5 text-sm font-bold uppercase tracking-widest hover:bg-secondary transition-colors duration-300">
-                        Parlem del teu projecte
-                        <span className="material-symbols-outlined">arrow_forward</span>
-                    </Link>
-                </div>
-            </section>
-        );
+        const ScrollToTop = () => {
+            const { pathname } = useLocation();
+            useEffect(() => {
+                window.scrollTo(0, 0);
+            }, [pathname]);
+            return null;
+        };
 
-        // --- Pages ---
+        // --- Page Components ---
 
+        // Screen 3: Home Page
         const HomePage = () => {
+            const [modalData, setModalData] = useState(null);
+
+            const projects = [
+                {
+                    title: "Teatre Municipal de Roses",
+                    category: "Infraestructura Pública",
+                    year: "2023",
+                    location: "Roses",
+                    desc: "Coordinació tècnica rigorosa per a una instal·lació cultural de gran escala. El projecte va requerir una adhesió estricta als estàndards acústics i la integritat estructural.",
+                    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDDZhAf3tsX26DXMUkOxyT4aXgLx7ccT8811iVMeePiBLUr5ROhHeB5LOSP6LQx36jpkuQVJq_wQm_sgUANaB80m7id7540LAXnutz3n2Adbdbv4EdUEtc63lzFYJpIvsmSHd1a6n_NUqbfdfI5h4dpLPJEksONEMjFhcG8k5cruFRCVXScrSwbViGDa4F4QUNRmLPM44Xx0Sneog1AY_hgA1qu04PypQe_A-TZrBj9tvJfXrLxVkcZplys_p2_d9nCan-gGxgyavM"
+                },
+                {
+                    title: "Pavelló de Camprodon",
+                    category: "Integració Paisatgística",
+                    year: "2022",
+                    location: "Camprodon",
+                    desc: "Un projecte definit per la seva precisa execució estructural dins d'un entorn sensible. Es va posar èmfasi en la durabilitat dels materials.",
+                    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD7lpK9vj51dT4Eb-HRDdO_1ukGneT4BdFk5OuBn_odWXYxorNnI0NiwoASY3oIgmjk1dfS0tjlvvII5q0t_hLc49OwRXrAT2tkP4KECE-gbsi9-NELSm-nR8LIj5qZ_W9duR2IXH5uuKy2EIpe4TfBQLEAGyit-o1ukXfq-Uav2yYVZMYCOxo-11TF7wIj9qXpV4BEdHpP9ApI1PJ4pAg4DIJI3_lw4bwqOXuadAabkBYik91HgJwYUXPPsyrul_ZqrvmWB04hS64"
+                },
+                {
+                    title: "Jardí habitable, Capmany",
+                    category: "Materialitat Poc Convencional",
+                    year: "2021",
+                    location: "Capmany",
+                    desc: "Direcció d'execució d'obra per a una intervenció arquitectònica d'alta sensibilitat. El projecte va exigir una sensibilitat tècnica excepcional.",
+                    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuASJoKT9HyFfhi_Ka7i_2eCz8RUTWa-V1JcHK1eXrEue9NRv9VUOmPD__TvLHAe1yn3ixlKJ5jyrL4VAD4dggnNYHHLfX7oi-nUTmHEPb9WrKUgahMbx6liU-YA0ZKGel8Gm0kpZZ9yh_fyqV9JkVpxUInTBlZl7gUJqp0hCo3yWmlGkI9yE4UboFbdYNShvyuvkn9ZduE2nJYesH1I78EABjzpGthAc0QyDU-l9mF3VrHJBGWzThnXVmn--fGB9aeZBH5HA5W1dHQ"
+                }
+            ];
+
             return (
-                <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-light text-secondary">
+                <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
                     <Navigation isTransparent={true} />
                     
-                    {/* Hero */}
-                    <section className="relative w-full h-screen min-h-[700px] flex flex-col">
+                    <section className="relative w-full h-screen min-h-[800px] flex flex-col justify-end pb-20 md:pb-32">
                         <div className="absolute inset-0 z-0">
                             <div className="w-full h-full absolute inset-0 z-0 overflow-hidden">
-                                <img alt="Architectural texture" className="w-full h-full object-cover grayscale brightness-[0.6] contrast-125" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAw39nCLw1h5xztHI2wUPYoT8jq4nyk1EnKKdNNPobQ4i0WdxhjNPE14FgphCHmvNZ4GtYRehsJa5aF4Hbf8JQeekPqcZmYNz1tDM15fhPkUYwWVair0-3Un1hBtt5kZmO8BKj7BVdMpWI-swXvcLNcz-DwDe1tbQupu8GAvirUV-7pyZODmtFTtUMZ1KYn1cNyS5Cs0S5vUUbZ8xAd0HJNjlXNxzBaOKSB_sIXXf2aI4Jhx1rTZo07hgEw4eKdASKY-W_rb6MawWE"/>
-                                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
+                                <img alt="Architectural texture" className="w-full h-full object-cover grayscale brightness-[0.4] contrast-125" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAw39nCLw1h5xztHI2wUPYoT8jq4nyk1EnKKdNNPobQ4i0WdxhjNPE14FgphCHmvNZ4GtYRehsJa5aF4Hbf8JQeekPqcZmYNz1tDM15fhPkUYwWVair0-3Un1hBtt5kZmO8BKj7BVdMpWI-swXvcLNcz-DwDe1tbQupu8GAvirUV-7pyZODmtFTtUMZ1KYn1cNyS5Cs0S5vUUbZ8xAd0HJNjlXNxzBaOKSB_sIXXf2aI4Jhx1rTZo07hgEw4eKdASKY-W_rb6MawWE"/>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90"></div>
                             </div>
                         </div>
-                        <div className="relative z-10 flex-1 flex flex-col justify-center px-6 md:px-12 max-w-[1600px] mx-auto w-full pt-20">
-                            <div className="mb-auto"></div>
-                            <div className="py-12 md:py-24">
-                                <div className="inline-block border-l-2 border-primary pl-4 mb-6">
-                                    <span className="text-white/80 uppercase tracking-[0.2em] text-sm font-bold">Arquitectura Tècnica</span>
+                        <div className="relative z-10 px-6 md:px-12 max-w-[1800px] mx-auto w-full">
+                            <div className="max-w-4xl">
+                                <div className="flex items-center gap-4 mb-6 animate-fade-in" style={{animationDelay: '0.1s'}}>
+                                    <span className="h-px w-12 bg-primary"></span>
+                                    <span className="text-primary font-bold tracking-[0.2em] uppercase text-sm">Arquitectura Tècnica</span>
                                 </div>
-                                <h1 className="text-5xl md:text-7xl lg:text-9xl font-display font-medium tracking-tight text-white leading-[0.95]">
+                                <h1 className="text-6xl md:text-8xl lg:text-9xl font-display font-bold tracking-tight text-white leading-[0.9] mb-8 animate-fade-in" style={{animationDelay: '0.2s'}}>
                                     CiC Gestió<span className="text-primary">.</span>
                                 </h1>
-                                <p className="mt-8 text-lg md:text-xl font-light text-white/90 max-w-xl leading-relaxed">
-                                    Estudi d'Enginyeria de l'Edificació. Especialitzats en disseny sostenible, gestió integral d'obres i planificació estructural complexa.
+                                <p className="text-xl md:text-2xl text-gray-300 font-light max-w-2xl leading-relaxed mb-10 border-l border-white/20 pl-6 animate-fade-in" style={{animationDelay: '0.3s'}}>
+                                    Rigor tècnic en la construcció complexa.
                                 </p>
-                                <div className="mt-10 flex gap-4">
-                                    <Link to="/projects" className="bg-primary hover:bg-white hover:text-dark text-white px-8 py-3 text-sm font-bold uppercase tracking-widest transition-all duration-300">Veure Projectes</Link>
-                                    <Link to="/contact" className="border border-white/30 hover:border-white hover:bg-white hover:text-dark text-white px-8 py-3 text-sm font-bold uppercase tracking-widest transition-all duration-300">Contactar</Link>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-12 right-12 z-20 hidden md:flex gap-4 text-white">
-                            <div className="flex flex-col items-end gap-1">
-                                <span className="text-xs uppercase tracking-widest text-white/60">Scroll</span>
-                                <div className="h-16 w-[1px] bg-white/20 relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-full h-1/2 bg-primary animate-pulsedown"></div>
+                                <div className="flex flex-col sm:flex-row gap-6 animate-fade-in" style={{animationDelay: '0.4s'}}>
+                                    <Link to="/contact" className="group flex items-center gap-4 text-white hover:text-primary transition-colors">
+                                        <div className="w-12 h-12 border border-white/20 rounded-full flex items-center justify-center group-hover:border-primary group-hover:bg-primary/10 transition-all">
+                                            <span className="material-symbols-outlined group-hover:rotate-45 transition-transform">arrow_forward</span>
+                                        </div>
+                                        <span className="uppercase tracking-widest text-sm font-bold">Consulta Professional</span>
+                                    </Link>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    {/* About */}
-                    <section className="w-full bg-white text-dark py-24 md:py-32" id="about">
+                    <section className="w-full bg-white py-24 md:py-32 scroll-mt-20" id="about">
                         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
-                            <div className="flex flex-col lg:flex-row gap-16 lg:gap-24 items-center">
-                                <div className="w-full lg:w-5/12 order-2 lg:order-1">
-                                    <div className="relative w-full aspect-[3/4] overflow-hidden group">
-                                        <div className="absolute inset-0 border-2 border-dark translate-x-4 translate-y-4 z-0 transition-transform group-hover:translate-x-2 group-hover:translate-y-2"></div>
-                                        <div className="relative z-10 w-full h-full overflow-hidden">
-                                            <img alt="Architect working" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAw22T9Pu4jVUjZetIP_4phJWzVs0bo3iuhm4Ex3h5xqe48rDCUKMs8QT4UI_f_neWjEyGodQDHbYHg_LLT9eGaNUPq3PTZoICSb8sNXoRMMjcuW_tAhTGLn1VrX3gb1UZu1sIYN2rbDqgfEBZnDqeUp6ZC6RL0Xj6b3yHs2y_w6GKwgkissYmHFWf33N-IoW32c-Nb4IfeOD57G1MAx3s2bjtL8aoxbxaQucucgDJWk_x3BAtB985uFHTVfkUG6UuAFLvDG16YRiQ"/>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="w-full lg:w-7/12 flex flex-col justify-center order-1 lg:order-2">
-                                    <span className="text-primary font-bold tracking-widest uppercase text-xs mb-4 block">L'Estudi</span>
-                                    <h2 className="text-4xl md:text-6xl font-display font-bold mb-8 tracking-tight leading-tight">
-                                        Qui som<span className="text-primary">.</span>
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
+                                <div className="md:col-span-4 sticky top-32">
+                                    <span className="text-primary font-bold tracking-widest uppercase text-xs mb-6 block">Sobre Nosaltres</span>
+                                    <h2 className="text-4xl md:text-5xl font-display font-bold text-dark leading-tight">
+                                        Visió Tècnica.
                                     </h2>
-                                    <div className="space-y-6 text-lg md:text-xl text-gray-text font-light leading-relaxed max-w-2xl">
-                                        <p>
-                                            <strong className="text-dark font-medium">CiC Gestió</strong> és un estudi d'arquitectura tècnica format per un equip de professionals dedicats al desenvolupament integral de projectes d'edificació.
-                                        </p>
-                                        <p>
-                                            A <strong className="text-dark font-medium">CiC Gestió</strong>, ens impliquem des del primer moment en cada projecte per oferir el servei més rigorós amb les màximes garanties de qualitat i eficiència. La nostra filosofia es basa en la precisió tècnica i l'atenció al detall.
-                                        </p>
-                                    </div>
-                                    <div className="mt-10 flex items-center gap-8">
-                                        <div className="flex flex-col">
-                                            <span className="text-3xl font-display font-bold">15+</span>
-                                            <span className="text-xs uppercase tracking-wider text-gray-500">Anys d'Experiència</span>
-                                        </div>
-                                        <div className="h-8 w-px bg-gray-200"></div>
-                                        <div className="flex flex-col">
-                                            <span className="text-3xl font-display font-bold">50+</span>
-                                            <span className="text-xs uppercase tracking-wider text-gray-500">Projectes Realitzats</span>
-                                        </div>
-                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Services Preview */}
-                    <section className="w-full bg-stone-light py-24 md:py-32">
-                        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
-                            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
-                                <div className="max-w-2xl">
-                                    <span className="text-primary font-bold tracking-widest uppercase text-xs mb-4 block">Què oferim</span>
-                                    <h2 className="font-display font-bold text-4xl md:text-5xl text-dark mb-6">Serveis Integrals</h2>
-                                    <p className="text-gray-600 text-lg leading-relaxed">
-                                        A <strong className="text-black">CiC Gestió</strong> oferim una àmplia gamma de serveis per al desenvolupament de projectes de construcció. Ens especialitzem en la preparació d'estats d'amidaments i en la Direcció d'Execució d'Obres.
+                                <div className="md:col-span-8 space-y-12">
+                                    <p className="text-xl md:text-2xl font-light text-secondary leading-relaxed text-justify">
+                                        Forjada a través de més de 30 anys d'experiència en obra i més de 50 projectes executats, la meva pràctica es defineix per l'estricta disciplina requerida en la construcció d'alta complexitat. El meu enfocament no és només la gestió, sinó la direcció tècnica tangible d'obres de gran envergadura on la precisió és obligatòria.
+                                    </p>
+                                    <p className="text-lg md:text-xl font-light text-gray-600 leading-relaxed text-justify">
+                                        Faig de pont entre la visió arquitectònica i la realitat construïda, aportant la solvència i la supervisió exigent necessàries per executar projectes que no permeten marge d'error.
                                     </p>
                                 </div>
-                                <Link to="/services" className="hidden md:flex items-center gap-2 text-sm font-bold uppercase tracking-widest hover:text-primary transition-colors">
-                                    Consultar Serveis <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div className="w-full h-[60vh] md:h-[80vh] relative overflow-hidden">
+                        <div className="absolute inset-0 bg-dark/20 z-10"></div>
+                        <img alt="Construction detail" className="w-full h-full object-cover fixed-bg-effect" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAw22T9Pu4jVUjZetIP_4phJWzVs0bo3iuhm4Ex3h5xqe48rDCUKMs8QT4UI_f_neWjEyGodQDHbYHg_LLT9eGaNUPq3PTZoICSb8sNXoRMMjcuW_tAhTGLn1VrX3gb1UZu1sIYN2rbDqgfEBZnDqeUp6ZC6RL0Xj6b3yHs2y_w6GKwgkissYmHFWf33N-IoW32c-Nb4IfeOD57G1MAx3s2bjtL8aoxbxaQucucgDJWk_x3BAtB985uFHTVfkUG6UuAFLvDG16YRiQ" style={{backgroundAttachment: 'fixed'}}/>
+                        <div className="absolute bottom-0 left-0 w-full p-12 z-20 bg-gradient-to-t from-black/80 to-transparent">
+                            <div className="max-w-[1400px] mx-auto w-full">
+                                <div className="flex items-end justify-between text-white">
+                                    <div>
+                                        <span className="block text-4xl md:text-6xl font-display font-bold">30+</span>
+                                        <span className="text-sm uppercase tracking-widest opacity-80">Anys d'Experiència</span>
+                                    </div>
+                                    <div className="hidden md:block">
+                                        <span className="block text-4xl md:text-6xl font-display font-bold text-right">50+</span>
+                                        <span className="text-sm uppercase tracking-widest opacity-80">Projectes Executats</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <section className="w-full bg-secondary text-white py-24 md:py-32 scroll-mt-20" id="services">
+                        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
+                            <div className="flex flex-col lg:flex-row gap-16">
+                                <div className="w-full lg:w-1/3 lg:h-[calc(100vh-200px)] lg:sticky lg:top-32 flex flex-col justify-between">
+                                    <div>
+                                        <span className="text-primary font-bold tracking-widest uppercase text-xs mb-4 block">Serveis</span>
+                                        <h2 className="text-4xl md:text-6xl font-display font-bold mb-6">Què fem<span className="text-primary">.</span></h2>
+                                        <p className="text-gray-400 text-lg leading-relaxed max-w-sm">
+                                            Acompanyament integral en totes les fases del procés constructiu. Des dels estudis previs fins al lliurament de claus.
+                                        </p>
+                                    </div>
+                                    <div className="hidden lg:block">
+                                        <Link to="/contact" className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest hover:text-primary transition-colors border-b border-white/20 pb-1">
+                                            Sol·licitar Pressupost <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                                        </Link>
+                                    </div>
+                                </div>
+                                <div className="w-full lg:w-2/3 space-y-12">
+                                    {/* Service Items */}
+                                    {[
+                                        { id: '01', title: "Direcció d'Execució", desc: "Assegurem la fidelitat de l'obra al projecte, controlant la qualitat dels materials i la correcta execució. Som els teus ulls a l'obra.", features: ["Control Econòmic", "Planificació Temporal", "Gestió d'Industrials", "Actes i Certificacions"] },
+                                        { id: '02', title: "Project Management", desc: "Gestionem el teu projecte de principi a fi. Ens encarreguem de tota la paperassa, llicències i coordinació perquè tu només gaudeixis del resultat.", features: ["Estudis de Viabilitat", "Gestió de Llicències", "Contractació", "Control de Costos"] },
+                                        { id: '03', title: "Seguretat i Salut", desc: "La seguretat és innegociable. Redactem estudis i coordinem la seguretat en fase de projecte i execució per garantir un entorn de treball segur.", features: ["Estudis de Seguretat", "Plans de Seguretat", "Coordinació d'Obra", "Formació"] },
+                                        { id: '04', title: "Informes Tècnics", desc: "Diagnosi precisa de patologies i estat de conservació dels edificis. Redacció de certificats i documentació oficial.", features: ["ITEs", "Cèdules d'Habitabilitat", "Certificats Energètics", "Peritatges"] }
+                                    ].map((service) => (
+                                        <div key={service.id} className="group border-b border-white/10 pb-12 hover:border-primary transition-colors duration-500">
+                                            <div className="flex flex-col md:flex-row gap-8 items-start">
+                                                <span className="text-primary/50 font-display text-4xl font-light group-hover:text-primary transition-colors">{service.id}</span>
+                                                <div>
+                                                    <h3 className="text-2xl md:text-3xl font-display font-bold mb-4 group-hover:translate-x-2 transition-transform duration-300">{service.title}</h3>
+                                                    <p className="text-gray-400 leading-relaxed mb-6 group-hover:text-white transition-colors">{service.desc}</p>
+                                                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 text-sm text-gray-500 font-medium">
+                                                        {service.features.map((feat, idx) => (
+                                                            <li key={idx} className="flex items-center gap-2"><span className="w-1 h-1 bg-primary rounded-full"></span> {feat}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="w-full bg-stone-50 py-24 md:py-32 scroll-mt-20" id="work">
+                        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
+                            <div className="flex justify-between items-end mb-16 md:mb-24">
+                                <div>
+                                    <span className="text-primary font-bold tracking-widest uppercase text-xs mb-3 block">Portfoli</span>
+                                    <h2 className="text-4xl md:text-6xl font-display font-bold text-dark">Projectes Destacats<span className="text-primary">.</span></h2>
+                                </div>
+                                <Link to="/projects" className="hidden md:inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest hover:text-primary transition-colors">
+                                    Veure tot <span className="material-symbols-outlined text-lg">arrow_forward</span>
                                 </Link>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                {[
-                                    { icon: "architecture", title: "Fase de Projecte", items: ["Consultoria Tècnica", "Estudis Preliminars", "Pressupost i Amidaments", "Estudis de Seguretat"] },
-                                    { icon: "engineering", title: "Fase d'Execució", items: ["Direcció d'Execució", "Control Econòmic", "Coordinació de Seguretat", "Control de Qualitat"] },
-                                    { icon: "description", title: "Informes i Certificats", items: ["Inspecció Tècnica (ITE)", "Cèdules d'Habitabilitat", "Eficiència Energètica", "Auditories de Projecte"] },
-                                    { icon: "construction", title: "Obres Menors", items: ["Rehabilitació de Façanes", "Reparació de Patologies", "Reformes Interiors", "Canvis d'Ús"] }
-                                ].map((service, idx) => (
-                                    <div key={idx} className="bg-white p-8 group hover:-translate-y-2 transition-transform duration-300 border border-transparent hover:border-primary/20">
-                                        <div className="h-16 w-16 mb-8 text-primary opacity-80 group-hover:opacity-100 transition-opacity">
-                                            <span className="material-symbols-outlined text-5xl">{service.icon}</span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24 mb-12">
+                                {projects.slice(0, 2).map((project, idx) => (
+                                    <div key={idx} className="group cursor-pointer project-card w-full" onClick={() => setModalData(project)}>
+                                        <div className="relative overflow-hidden mb-6 aspect-[4/3] bg-gray-200">
+                                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 flex items-center justify-center">
+                                                <span className="text-white border border-white px-6 py-3 uppercase tracking-widest text-xs font-bold hover:bg-white hover:text-dark transition-colors">Veure Projecte</span>
+                                            </div>
+                                            <img alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src={project.image}/>
                                         </div>
-                                        <h3 className="text-xl font-bold font-display mb-4">{service.title}</h3>
-                                        <ul className="text-sm text-gray-600 space-y-3 font-medium">
-                                            {service.items.map((item, i) => (
-                                                <li key={i} className="flex items-center gap-2"><span className="w-1 h-1 bg-primary rounded-full"></span> {item}</li>
-                                            ))}
-                                        </ul>
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-xs font-bold text-primary uppercase tracking-widest">{project.category}</span>
+                                            <h3 className="text-2xl font-display font-bold text-dark group-hover:text-primary transition-colors">{project.title}</h3>
+                                            <p className="text-gray-500 text-sm">{project.location}</p>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    </section>
-
-                    {/* Projects Preview */}
-                    <section className="w-full bg-white py-24">
-                        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
-                            <div className="mb-16 flex justify-between items-end">
-                                <div>
-                                    <span className="text-primary font-bold tracking-widest uppercase text-xs mb-2 block">Portfoli</span>
-                                    <h2 className="text-4xl md:text-5xl font-display font-bold text-dark">Projectes Destacats</h2>
+                            <div className="flex justify-center">
+                                <div className="w-full md:w-2/3 group cursor-pointer project-card" onClick={() => setModalData(projects[2])}>
+                                    <div className="relative overflow-hidden mb-6 aspect-[16/9] bg-gray-200">
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 flex items-center justify-center">
+                                            <span className="text-white border border-white px-6 py-3 uppercase tracking-widest text-xs font-bold hover:bg-white hover:text-dark transition-colors">Veure Projecte</span>
+                                        </div>
+                                        <img alt={projects[2].title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src={projects[2].image}/>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-xs font-bold text-primary uppercase tracking-widest">{projects[2].category}</span>
+                                        <h3 className="text-2xl font-display font-bold text-dark group-hover:text-primary transition-colors">{projects[2].title}</h3>
+                                        <p className="text-gray-500 text-sm">{projects[2].location}</p>
+                                    </div>
                                 </div>
-                                <Link to="/projects" className="hidden md:inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest hover:text-primary transition-colors">
-                                    Tots els Projectes <span className="material-symbols-outlined text-lg">arrow_forward</span>
-                                </Link>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-16">
-                                <Link to="/projects" className="group cursor-pointer">
-                                    <div className="relative overflow-hidden aspect-[4/3] mb-6 bg-gray-100">
-                                        <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors z-10 duration-500"></div>
-                                        <img alt="Biblioteca Urbana" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDZhAf3tsX26DXMUkOxyT4aXgLx7ccT8811iVMeePiBLUr5ROhHeB5LOSP6LQx36jpkuQVJq_wQm_sgUANaB80m7id7540LAXnutz3n2Adbdbv4EdUEtc63lzFYJpIvsmSHd1a6n_NUqbfdfI5h4dpLPJEksONEMjFhcG8k5cruFRCVXScrSwbViGDa4F4QUNRmLPM44Xx0Sneog1AY_hgA1qu04PypQe_A-TZrBj9tvJfXrLxVkcZplys_p2_d9nCan-gGxgyavM"/>
-                                    </div>
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <h3 className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors">Biblioteca Central Urbana</h3>
-                                            <p className="text-sm text-gray-500 mt-1">Rehabilitació i Millora Energètica</p>
-                                        </div>
-                                        <span className="text-xs font-bold border border-gray-200 px-2 py-1 uppercase text-gray-400">2022</span>
-                                    </div>
-                                </Link>
-                                <Link to="/projects" className="group cursor-pointer md:mt-16">
-                                    <div className="relative overflow-hidden aspect-[4/3] mb-6 bg-gray-100">
-                                        <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors z-10 duration-500"></div>
-                                        <img alt="Refugi Forestal" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuASJoKT9HyFfhi_Ka7i_2eCz8RUTWa-V1JcHK1eXrEue9NRv9VUOmPD__TvLHAe1yn3ixlKJ5jyrL4VAD4dggnNYHHLfX7oi-nUTmHEPb9WrKUgahMbx6liU-YA0ZKGel8Gm0kpZZ9yh_fyqV9JkVpxUInTBlZl7gUJqp0hCo3yWmlGkI9yE4UboFbdYNShvyuvkn9ZduE2nJYesH1I78EABjzpGthAc0QyDU-l9mF3VrHJBGWzThnXVmn--fGB9aeZBH5HA5W1dHQ"/>
-                                    </div>
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <h3 className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors">Refugi al Bosc</h3>
-                                            <p className="text-sm text-gray-500 mt-1">39 Habitatges Cooperatius</p>
-                                        </div>
-                                        <span className="text-xs font-bold border border-gray-200 px-2 py-1 uppercase text-gray-400">2023</span>
-                                    </div>
+                            <div className="md:hidden mt-16 text-center">
+                                <Link to="/projects" className="bg-secondary text-white px-8 py-3 text-sm font-bold uppercase tracking-widest">
+                                    Tots els Projectes
                                 </Link>
                             </div>
                         </div>
                     </section>
 
-                    {/* Testimonials */}
-                    <section className="w-full bg-dark text-white py-24">
-                        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
-                            <div className="flex flex-col md:flex-row gap-16">
-                                <div className="w-full md:w-1/3">
-                                    <span className="text-primary font-bold tracking-widest uppercase text-xs mb-4 block">Testimonis</span>
-                                    <h2 className="text-4xl md:text-5xl font-display font-bold mb-6">Opinions dels nostres clients</h2>
-                                    <p className="text-gray-400 leading-relaxed">
-                                        La satisfacció dels nostres clients és la nostra millor carta de presentació. Treballem estretament amb promotors i propietaris per garantir l'èxit.
-                                    </p>
-                                </div>
-                                <div className="w-full md:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="bg-white/5 p-8 border border-white/10 hover:border-primary/50 transition-colors">
-                                        <div className="flex gap-1 text-primary mb-4">
-                                            {[1,2,3,4,5].map(i => <span key={i} className="material-symbols-outlined text-sm">star</span>)}
-                                        </div>
-                                        <p className="text-lg italic text-gray-300 mb-6">"Un equip molt professional. La direcció de l'obra de la nostra nova seu va ser impecable, complint terminis i pressupost."</p>
-                                        <div>
-                                            <span className="block font-bold font-display">Jordi Martí</span>
-                                            <span className="text-xs text-gray-500 uppercase tracking-wider">Promotora Immobiliària</span>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white/5 p-8 border border-white/10 hover:border-primary/50 transition-colors">
-                                        <div className="flex gap-1 text-primary mb-4">
-                                            {[1,2,3,4,5].map(i => <span key={i} className="material-symbols-outlined text-sm">star</span>)}
-                                        </div>
-                                        <p className="text-lg italic text-gray-300 mb-6">"Excel·lent gestió tècnica. Van solucionar problemes estructurals complexos amb gran eficàcia durant la rehabilitació."</p>
-                                        <div>
-                                            <span className="block font-bold font-display">Anna Soler</span>
-                                            <span className="text-xs text-gray-500 uppercase tracking-wider">Comunitat de Propietaris</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <section className="w-full bg-secondary text-white py-24 border-t border-white/5">
+                        <div className="w-full max-w-[1200px] mx-auto px-6 md:px-12 text-center">
+                            <span className="text-primary font-bold tracking-widest uppercase text-xs mb-8 block">La veu dels clients</span>
+                            <blockquote className="text-3xl md:text-5xl font-display font-light leading-snug mb-10 max-w-4xl mx-auto">
+                                "La seva capacitat per resoldre problemes complexos en obra és excepcional. Més que tècnics, són socis estratègics."
+                            </blockquote>
+                            <cite className="not-italic flex flex-col items-center gap-1">
+                                <span className="font-bold text-lg">Jordi Martí</span>
+                                <span className="text-sm text-gray-500 uppercase tracking-widest">Promotora Immobiliària</span>
+                            </cite>
                         </div>
                     </section>
-
-                    <CallToAction />
+                    
                     <Footer />
+
+                    {/* Modal */}
+                    {modalData && (
+                        <div className="fixed inset-0 z-[100]" role="dialog">
+                            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300" onClick={() => setModalData(null)}></div>
+                            <div className="fixed inset-0 z-10 w-screen overflow-y-auto modal-scroll">
+                                <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                                    <div className="relative transform overflow-hidden bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl animate-fadeIn">
+                                        <div className="absolute right-0 top-0 pr-4 pt-4 sm:block z-10">
+                                            <button className="rounded-full bg-white/10 backdrop-blur-md p-1 text-white hover:text-primary transition-colors focus:outline-none" onClick={() => setModalData(null)}>
+                                                <span className="material-symbols-outlined text-3xl drop-shadow-md">close</span>
+                                            </button>
+                                        </div>
+                                        <div className="bg-white">
+                                            <div className="relative h-64 sm:h-96 w-full">
+                                                <img alt={modalData.title} className="absolute inset-0 h-full w-full object-cover" src={modalData.image}/>
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                                <div className="absolute bottom-6 left-6 sm:bottom-10 sm:left-10 text-white max-w-3xl pr-4">
+                                                    <span className="text-xs font-bold border border-white/40 px-2 py-1 uppercase tracking-widest mb-3 inline-block bg-black/20 backdrop-blur-sm">{modalData.category}</span>
+                                                    <h3 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold leading-none">{modalData.title}</h3>
+                                                </div>
+                                            </div>
+                                            <div className="px-6 py-8 sm:px-10 sm:py-12">
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-12">
+                                                    <div className="md:col-span-2 space-y-8">
+                                                        <div>
+                                                            <h4 className="text-lg font-bold font-display text-dark mb-3">Sobre el Projecte</h4>
+                                                            <p className="text-gray-600 leading-relaxed font-light text-lg">{modalData.desc}</p>
+                                                        </div>
+                                                        <div className="pt-4">
+                                                            <h4 className="text-sm font-bold uppercase tracking-widest text-dark mb-4">Galeria d'Imatges</h4>
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div className="aspect-video bg-gray-100 overflow-hidden relative group">
+                                                                    <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src={modalData.image} alt="Detail 1"/>
+                                                                </div>
+                                                                <div className="aspect-video bg-gray-100 overflow-hidden relative group">
+                                                                    <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src={modalData.image} alt="Detail 2"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="md:col-span-1 space-y-6 border-t md:border-t-0 md:border-l border-gray-100 pt-8 md:pt-0 md:pl-8 h-fit">
+                                                        <div>
+                                                            <span className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Any de finalització</span>
+                                                            <span className="text-dark font-medium text-lg">{modalData.year}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Ubicació</span>
+                                                            <span className="text-dark font-medium text-lg">{modalData.location}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Serveis Prestats</span>
+                                                            <ul className="text-sm text-gray-600 space-y-2 mt-2">
+                                                                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-primary rounded-full"></span> Direcció d'Execució</li>
+                                                                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-primary rounded-full"></span> Control de Qualitat</li>
+                                                                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-primary rounded-full"></span> Coordinació Seguretat</li>
+                                                            </ul>
+                                                        </div>
+                                                        <button className="w-full bg-secondary text-white py-4 px-4 text-xs font-bold uppercase tracking-widest hover:bg-primary transition-colors mt-4 shadow-lg flex items-center justify-center gap-2">
+                                                            Fitxa Tècnica <span className="material-symbols-outlined text-sm">download</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
 
+        // Screen 1: Services Page
+        const ServicesPage = () => (
+            <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+                <Navigation />
+                <section className="relative w-full pt-32 pb-20 md:pt-48 md:pb-32 bg-secondary text-white">
+                    <div className="absolute inset-0 z-0 opacity-20">
+                        <img alt="Background architectural texture" className="w-full h-full object-cover grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7lpK9vj51dT4Eb-HRDdO_1ukGneT4BdFk5OuBn_odWXYxorNnI0NiwoASY3oIgmjk1dfS0tjlvvII5q0t_hLc49OwRXrAT2tkP4KECE-gbsi9-NELSm-nR8LIj5qZ_W9duR2IXH5uuKy2EIpe4TfBQLEAGyit-o1ukXfq-Uav2yYVZMYCOxo-11TF7wIj9qXpV4BEdHpP9ApI1PJ4pAg4DIJI3_lw4bwqOXuadAabkBYik91HgJwYUXPPsyrul_ZqrvmWB04hS64"/>
+                    </div>
+                    <div className="relative z-10 w-full max-w-[1400px] mx-auto px-6 md:px-12">
+                        <span className="text-primary font-bold tracking-[0.2em] uppercase text-sm mb-4 block">Arquitectura Tècnica</span>
+                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-bold tracking-tight mb-8">
+                            Serveis <br/> <span className="text-transparent text-outline-white">Professionals</span>
+                        </h1>
+                        <p className="max-w-2xl text-gray-300 text-lg md:text-xl font-light leading-relaxed">
+                            Oferim solucions tècniques integrals per a l'edificació, garantint la qualitat, la seguretat i l'eficiència en cada fase del procés constructiu.
+                        </p>
+                    </div>
+                </section>
+                <section className="w-full bg-light py-20 md:py-32 scroll-mt-24" id="serveis">
+                    <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+                            {[
+                                { icon: "construction", title: "Direcció d'Execució", text: "Supervisió tècnica rigorosa de l'obra. Dirigim l'execució material controlant qualitativament i quantitativament la construcció i la qualitat d'allò edificat, assegurant el compliment del projecte." },
+                                { icon: "terrain", title: "Geotècnia", text: "Estudis geotècnics exhaustius per a la correcta caracterització del terreny. Anàlisi de fonamentacions, estabilitat de talussos i recomanacions constructives basades en dades precises del subsòl." },
+                                { icon: "workspace_premium", title: "Consultoria Sènior", text: "Assessorament estratègic d'alt nivell. Oferim serveis de Due Diligence, anàlisi de viabilitat de promocions i gestió de llicències complexes per a inversors i promotors exigents." },
+                                { icon: "account_tree", title: "Gestió de Projectes", text: "Project Management integral. Planifiquem i coordinem totes les fases, controlant costos i terminis per garantir l'èxit de l'obra des de la idea inicial fins al lliurament de claus." },
+                                { icon: "healing", title: "Patologies i Rehabilitació", text: "Diagnosi experta de lesions en l'edificació i informes pericials. Projectes de rehabilitació, reforços estructurals i manteniment preventiu (ITE) per allargar la vida útil dels edificis." }
+                            ].map((item, idx) => (
+                                <div key={idx} className="group border border-gray-100 p-8 md:p-10 hover:shadow-xl hover:border-primary/20 transition-all duration-300 bg-white flex flex-col items-start h-full">
+                                    <div className="w-16 h-16 bg-off-white text-secondary flex items-center justify-center mb-8 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                                        <span className="material-symbols-outlined text-3xl">{item.icon}</span>
+                                    </div>
+                                    <h3 className="text-2xl font-display font-bold text-secondary mb-4 group-hover:text-primary transition-colors">{item.title}</h3>
+                                    <p className="text-gray-600 leading-relaxed mb-6 flex-grow">{item.text}</p>
+                                    <Link to="/contact" className="inline-flex items-center text-sm font-bold uppercase tracking-wider text-primary border-b border-primary/30 pb-1 group-hover:border-primary transition-all">
+                                        Saber-ne més
+                                    </Link>
+                                </div>
+                            ))}
+                            <div className="group bg-secondary p-8 md:p-10 text-white flex flex-col items-start h-full justify-center relative overflow-hidden">
+                                <div className="absolute inset-0 z-0 opacity-20">
+                                    <img alt="Pattern" className="w-full h-full object-cover grayscale mix-blend-overlay" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7lpK9vj51dT4Eb-HRDdO_1ukGneT4BdFk5OuBn_odWXYxorNnI0NiwoASY3oIgmjk1dfS0tjlvvII5q0t_hLc49OwRXrAT2tkP4KECE-gbsi9-NELSm-nR8LIj5qZ_W9duR2IXH5uuKy2EIpe4TfBQLEAGyit-o1ukXfq-Uav2yYVZMYCOxo-11TF7wIj9qXpV4BEdHpP9ApI1PJ4pAg4DIJI3_lw4bwqOXuadAabkBYik91HgJwYUXPPsyrul_ZqrvmWB04hS64"/>
+                                </div>
+                                <div className="relative z-10">
+                                    <h3 className="text-2xl font-display font-bold mb-4">Necessites assessorament?</h3>
+                                    <p className="text-gray-300 leading-relaxed mb-6">
+                                        Contacta amb nosaltres per resoldre qualsevol dubte tècnic sobre el teu projecte.
+                                    </p>
+                                    <Link to="/contact" className="bg-primary hover:bg-white hover:text-secondary text-white px-6 py-3 text-sm font-bold uppercase tracking-widest transition-colors duration-300 inline-block">
+                                        Contactar ara
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section className="w-full bg-off-white py-24 md:py-32 border-t border-gray-200">
+                    <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12 flex flex-col items-center text-center">
+                        <h2 className="text-5xl md:text-7xl font-display font-bold text-secondary mb-8">
+                            Tens un projecte<br/>en ment?
+                        </h2>
+                        <p className="text-xl text-gray-600 mb-12 max-w-2xl">
+                            A <strong className="text-secondary">CiC Gestió</strong> t'oferim assessorament tècnic des del primer moment per garantir l'èxit de la teva obra.
+                        </p>
+                        <Link to="/contact" className="inline-flex items-center gap-3 bg-primary text-white px-12 py-5 text-sm font-bold uppercase tracking-widest hover:bg-secondary transition-colors duration-300">
+                            Parlem del teu projecte
+                            <span className="material-symbols-outlined">arrow_forward</span>
+                        </Link>
+                    </div>
+                </section>
+                <Footer />
+            </div>
+        );
+
+        // Screen 2: Projects Page
         const ProjectsPage = () => {
+            const [selectedProject, setSelectedProject] = useState(null);
+
             const projects = [
                 {
-                    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDDZhAf3tsX26DXMUkOxyT4aXgLx7ccT8811iVMeePiBLUr5ROhHeB5LOSP6LQx36jpkuQVJq_wQm_sgUANaB80m7id7540LAXnutz3n2Adbdbv4EdUEtc63lzFYJpIvsmSHd1a6n_NUqbfdfI5h4dpLPJEksONEMjFhcG8k5cruFRCVXScrSwbViGDa4F4QUNRmLPM44Xx0Sneog1AY_hgA1qu04PypQe_A-TZrBj9tvJfXrLxVkcZplys_p2_d9nCan-gGxgyavM",
-                    title: "Biblioteca Central Urbana",
-                    type: "Rehabilitació · 2023",
-                    loc: "Barcelona, Catalunya",
-                    id: "01"
+                    id: 1,
+                    title: "Teatre Municipal de Roses",
+                    subtitle: "Equipament Cultural · 2023",
+                    desc: "Rehabilitació integral i millora acústica",
+                    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDDZhAf3tsX26DXMUkOxyT4aXgLx7ccT8811iVMeePiBLUr5ROhHeB5LOSP6LQx36jpkuQVJq_wQm_sgUANaB80m7id7540LAXnutz3n2Adbdbv4EdUEtc63lzFYJpIvsmSHd1a6n_NUqbfdfI5h4dpLPJEksONEMjFhcG8k5cruFRCVXScrSwbViGDa4F4QUNRmLPM44Xx0Sneog1AY_hgA1qu04PypQe_A-TZrBj9tvJfXrLxVkcZplys_p2_d9nCan-gGxgyavM",
+                    details: {
+                        fullDesc: "Direcció d'execució material per a la rehabilitació integral de l'equipament escènic. El projecte va abordar la renovació completa de la caixa escènica, la implementació de nous sistemes de climatització d'alta eficiència i la millora de l'envolupant acústica.",
+                        extraDesc: "Es va realitzar un control exhaustiu dels acabats interiors, utilitzant fustes nobles per a l'optimització de la reverberació, i es van adaptar tots els accessos a la normativa vigent d'accessibilitat.",
+                        meta: { Ubicació: "Roses, Girona", Any: "2023", Superfície: "3.200 m²", Intervenció: "Rehabilitació" }
+                    }
                 },
                 {
-                    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuASJoKT9HyFfhi_Ka7i_2eCz8RUTWa-V1JcHK1eXrEue9NRv9VUOmPD__TvLHAe1yn3ixlKJ5jyrL4VAD4dggnNYHHLfX7oi-nUTmHEPb9WrKUgahMbx6liU-YA0ZKGel8Gm0kpZZ9yh_fyqV9JkVpxUInTBlZl7gUJqp0hCo3yWmlGkI9yE4UboFbdYNShvyuvkn9ZduE2nJYesH1I78EABjzpGthAc0QyDU-l9mF3VrHJBGWzThnXVmn--fGB9aeZBH5HA5W1dHQ",
-                    title: "Residencial Vallvidrera",
-                    type: "Obra Nova · 2022",
-                    loc: "Vallvidrera, Barcelona",
-                    id: "02",
-                    stagger: true
+                    id: 2,
+                    title: "Pavelló de Camprodon",
+                    subtitle: "Obra Nova · 2022",
+                    desc: "Estructura de fusta laminada i integració paisatgística",
+                    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuASJoKT9HyFfhi_Ka7i_2eCz8RUTWa-V1JcHK1eXrEue9NRv9VUOmPD__TvLHAe1yn3ixlKJ5jyrL4VAD4dggnNYHHLfX7oi-nUTmHEPb9WrKUgahMbx6liU-YA0ZKGel8Gm0kpZZ9yh_fyqV9JkVpxUInTBlZl7gUJqp0hCo3yWmlGkI9yE4UboFbdYNShvyuvkn9ZduE2nJYesH1I78EABjzpGthAc0QyDU-l9mF3VrHJBGWzThnXVmn--fGB9aeZBH5HA5W1dHQ",
+                    details: {
+                        fullDesc: "Execució d'un pavelló poliesportiu integrat en l'entorn natural. L'estructura principal es va resoldre mitjançant bigues de gran cantell de fusta laminada (GL24h), permetent llums lliures de 35 metres.",
+                        extraDesc: "El control de qualitat va incloure assajos específics de les unions metàl·liques i la verificació de l'estanquitat de la coberta de zinc. S'ha aconseguit una certificació energètica A gràcies al sistema de geotèrmia.",
+                        meta: { Ubicació: "Camprodon", Any: "2022", Material: "Fusta CLT", Certificació: "Classe A" }
+                    }
                 },
                 {
-                    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuD7lpK9vj51dT4Eb-HRDdO_1ukGneT4BdFk5OuBn_odWXYxorNnI0NiwoASY3oIgmjk1dfS0tjlvvII5q0t_hLc49OwRXrAT2tkP4KECE-gbsi9-NELSm-nR8LIj5qZ_W9duR2IXH5uuKy2EIpe4TfBQLEAGyit-o1ukXfq-Uav2yYVZMYCOxo-11TF7wIj9qXpV4BEdHpP9ApI1PJ4pAg4DIJI3_lw4bwqOXuadAabkBYik91HgJwYUXPPsyrul_ZqrvmWB04hS64",
-                    title: "Oficines Diagonal 120",
-                    type: "Reforma Integral · 2023",
-                    loc: "Eixample, Barcelona",
-                    id: "03"
+                    id: 3,
+                    title: "Jardí Habitable",
+                    subtitle: "Residencial · 2023",
+                    desc: "Habitatge unifamiliar amb criteris bioclimàtics",
+                    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD7lpK9vj51dT4Eb-HRDdO_1ukGneT4BdFk5OuBn_odWXYxorNnI0NiwoASY3oIgmjk1dfS0tjlvvII5q0t_hLc49OwRXrAT2tkP4KECE-gbsi9-NELSm-nR8LIj5qZ_W9duR2IXH5uuKy2EIpe4TfBQLEAGyit-o1ukXfq-Uav2yYVZMYCOxo-11TF7wIj9qXpV4BEdHpP9ApI1PJ4pAg4DIJI3_lw4bwqOXuadAabkBYik91HgJwYUXPPsyrul_ZqrvmWB04hS64",
+                    details: {
+                        fullDesc: "Projecte residencial que desdibuixa els límits entre interior i exterior. La direcció d'obra va vetllar per la correcta execució dels tancaments vidrats de gran format i la integració dels sistemes de recollida d'aigües pluvials per al reg.",
+                        extraDesc: "S'han utilitzat materials de proximitat i baixa petjada de carboni, com la ceràmica manual i morters de calç aèria, garantint un ambient interior saludable i transpirable.",
+                        meta: { Ubicació: "Baix Empordà", Any: "2023", Client: "Privat", Superfície: "450 m²" }
+                    }
                 },
                 {
-                    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuB0Hb6KMQiIuUDiqTnBp_y0alqIWEDciCo6BMISEITCa1lE-ngpVMFT1I5hCkdTzcHPKYhto3VmmWxeEQPeDMiidbvmcPXqS1vp2vaH3kHk7jdVl3diLFiEsiVtUvAh6X8Kf5xbkTHGknbBweuFveOBTdRSkywB8iSA7DP8Viw9HOXG91mHr4kyLg1BhGEbXRz_qUTSlrRxM5gMxT9qmBBp8zVf6KcKNhYNLkbgj3wn5J2bDWjGlo6tRBcspLEbfXo9CfYCqZKCOEY",
+                    id: 4,
                     title: "Centre Cívic Poblenou",
-                    type: "Equipament Públic · 2021",
-                    loc: "Poblenou, Barcelona",
-                    id: "04",
-                    stagger: true
-                },
-                {
-                    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAw39nCLw1h5xztHI2wUPYoT8jq4nyk1EnKKdNNPobQ4i0WdxhjNPE14FgphCHmvNZ4GtYRehsJa5aF4Hbf8JQeekPqcZmYNz1tDM15fhPkUYwWVair0-3Un1hBtt5kZmO8BKj7BVdMpWI-swXvcLNcz-DwDe1tbQupu8GAvirUV-7pyZODmtFTtUMZ1KYn1cNyS5Cs0S5vUUbZ8xAd0HJNjlXNxzBaOKSB_sIXXf2aI4Jhx1rTZo07hgEw4eKdASKY-W_rb6MawWE",
-                    title: "Rehabilitació Façana Històrica",
-                    type: "Restauració · 2020",
-                    loc: "Gòtic, Barcelona",
-                    id: "05"
-                },
-                {
-                    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAw22T9Pu4jVUjZetIP_4phJWzVs0bo3iuhm4Ex3h5xqe48rDCUKMs8QT4UI_f_neWjEyGodQDHbYHg_LLT9eGaNUPq3PTZoICSb8sNXoRMMjcuW_tAhTGLn1VrX3gb1UZu1sIYN2rbDqgfEBZnDqeUp6ZC6RL0Xj6b3yHs2y_w6GKwgkissYmHFWf33N-IoW32c-Nb4IfeOD57G1MAx3s2bjtL8aoxbxaQucucgDJWk_x3BAtB985uFHTVfkUG6UuAFLvDG16YRiQ",
-                    title: "Loft Industrial",
-                    type: "Interiorisme · 2024",
-                    loc: "Badalona",
-                    id: "06",
-                    stagger: true
+                    subtitle: "Equipament Públic · 2021",
+                    desc: "Transformació industrial i recuperació patrimonial",
+                    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuB0Hb6KMQiIuUDiqTnBp_y0alqIWEDciCo6BMISEITCa1lE-ngpVMFT1I5hCkdTzcHPKYhto3VmmWxeEQPeDMiidbvmcPXqS1vp2vaH3kHk7jdVl3diLFiEsiVtUvAh6X8Kf5xbkTHGknbBweuFveOBTdRSkywB8iSA7DP8Viw9HOXG91mHr4kyLg1BhGEbXRz_qUTSlrRxM5gMxT9qmBBp8zVf6KcKNhYNLkbgj3wn5J2bDWjGlo6tRBcspLEbfXo9CfYCqZKCOEY",
+                    details: {
+                        fullDesc: "Adequació d'una antiga nau industrial en un equipament públic multifuncional. El projecte va incloure el reforç estructural de les encavallades metàl·liques existents mitjançant fibra de carboni i la creació de nous nuclis de comunicació.",
+                        extraDesc: "La gestió de l'obra va ser complexa per la necessitat de mantenir elements protegits mentre s'incorporaven les instal·lacions tecnològiques requerides per a un espai del segle XXI.",
+                        meta: { Ubicació: "Barcelona", Any: "2021", Pressupost: "1.5M €", Superfície: "1.800 m²" }
+                    }
                 }
             ];
 
             return (
                 <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
                     <Navigation />
-                    <section className="relative w-full pt-32 pb-20 md:pt-48 md:pb-32 bg-secondary text-white">
-                        <div className="absolute inset-0 z-0 opacity-20">
-                            <img alt="Background architectural texture" className="w-full h-full object-cover grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7lpK9vj51dT4Eb-HRDdO_1ukGneT4BdFk5OuBn_odWXYxorNnI0NiwoASY3oIgmjk1dfS0tjlvvII5q0t_hLc49OwRXrAT2tkP4KECE-gbsi9-NELSm-nR8LIj5qZ_W9duR2IXH5uuKy2EIpe4TfBQLEAGyit-o1ukXfq-Uav2yYVZMYCOxo-11TF7wIj9qXpV4BEdHpP9ApI1PJ4pAg4DIJI3_lw4bwqOXuadAabkBYik91HgJwYUXPPsyrul_ZqrvmWB04hS64"/>
+                    <section className="relative w-full pt-40 pb-20 md:pt-56 md:pb-32 bg-secondary text-white">
+                        <div className="absolute inset-0 z-0 opacity-30 mix-blend-overlay">
+                            <img alt="Background architectural texture" className="w-full h-full object-cover grayscale contrast-125" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7lpK9vj51dT4Eb-HRDdO_1ukGneT4BdFk5OuBn_odWXYxorNnI0NiwoASY3oIgmjk1dfS0tjlvvII5q0t_hLc49OwRXrAT2tkP4KECE-gbsi9-NELSm-nR8LIj5qZ_W9duR2IXH5uuKy2EIpe4TfBQLEAGyit-o1ukXfq-Uav2yYVZMYCOxo-11TF7wIj9qXpV4BEdHpP9ApI1PJ4pAg4DIJI3_lw4bwqOXuadAabkBYik91HgJwYUXPPsyrul_ZqrvmWB04hS64"/>
                         </div>
                         <div className="relative z-10 w-full max-w-[1400px] mx-auto px-6 md:px-12">
-                            <span className="text-primary font-bold tracking-[0.2em] uppercase text-sm mb-4 block">Portfoli</span>
-                            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-bold tracking-tight mb-8">
-                                Projectes <br/> <span className="text-transparent text-outline">Seleccionats</span>
+                            <span className="text-primary font-bold tracking-[0.3em] uppercase text-xs mb-6 block border-l-2 border-primary pl-4">Portfoli Tècnic</span>
+                            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-bold tracking-tight mb-8 leading-none">
+                                Excel·lència en <br/> <span className="text-transparent text-outline-white">Execució</span>
                             </h1>
-                            <p className="max-w-2xl text-gray-300 text-lg md:text-xl font-light leading-relaxed">
-                                Una col·lecció de treballs d'arquitectura tècnica centrats en la rehabilitació, eficiència energètica i direcció d'execució.
+                            <p className="max-w-2xl text-gray-300 text-lg md:text-xl font-light leading-relaxed border-l border-white/20 pl-6 ml-1">
+                                Selecció de projectes d'arquitectura tècnica on la precisió constructiva, l'eficiència energètica i el control de costos defineixen el resultat final.
                             </p>
                         </div>
                     </section>
-                    <section className="w-full bg-light py-20 md:py-32">
+                    <section className="w-full bg-light py-20 md:py-32" id="projectes">
                         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
-                            <div className="flex flex-wrap gap-4 md:gap-8 mb-16 border-b border-gray-200 pb-8">
-                                <button className="text-sm font-bold uppercase tracking-widest text-primary border-b-2 border-primary pb-1">Tots</button>
-                                {['Rehabilitació', 'Obra Nova', 'Reformes', 'Públic'].map(cat => (
-                                    <button key={cat} className="text-sm font-bold uppercase tracking-widest text-gray-400 hover:text-secondary transition-colors pb-1">{cat}</button>
-                                ))}
+                            <div className="flex flex-wrap gap-6 md:gap-10 mb-20 border-b border-gray-200 pb-6 items-end justify-between">
+                                <div className="flex flex-wrap gap-6">
+                                    <button className="text-xs font-bold uppercase tracking-[0.15em] text-secondary border-b-2 border-primary pb-2 transition-all">Tots</button>
+                                    <button className="text-xs font-bold uppercase tracking-[0.15em] text-gray-400 hover:text-secondary transition-colors pb-2 hover:border-b-2 hover:border-gray-200">Rehabilitació</button>
+                                    <button className="text-xs font-bold uppercase tracking-[0.15em] text-gray-400 hover:text-secondary transition-colors pb-2 hover:border-b-2 hover:border-gray-200">Obra Nova</button>
+                                </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-24">
-                                {projects.map((p, idx) => (
-                                    <article key={idx} className={`group cursor-pointer flex flex-col h-full ${p.stagger ? 'md:mt-24' : ''}`}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-32">
+                                {projects.map((proj, idx) => (
+                                    <article key={proj.id} className={`group cursor-pointer flex flex-col h-full relative ${idx % 2 !== 0 ? 'md:mt-32' : ''}`} onClick={() => setSelectedProject(proj)}>
                                         <div className="relative overflow-hidden aspect-[16/10] mb-8 bg-gray-100">
-                                            <div className="absolute inset-0 bg-secondary/0 group-hover:bg-secondary/10 transition-colors z-10 duration-500"></div>
-                                            <img alt={p.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" src={p.img}/>
-                                            <div className="absolute bottom-0 left-0 bg-white p-4 md:p-6 translate-y-full group-hover:translate-y-0 transition-transform duration-500 z-20">
-                                                <span className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-primary">
-                                                    Veure Detalls <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                                            <div className="absolute inset-0 bg-secondary/0 group-hover:bg-secondary/20 transition-colors z-10 duration-500"></div>
+                                            <img alt={proj.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" src={proj.image}/>
+                                            <div className="absolute bottom-0 left-0 bg-secondary p-4 md:p-6 translate-y-full group-hover:translate-y-0 transition-transform duration-500 z-20 w-full">
+                                                <span className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-white">
+                                                    Explorar Fitxa Tècnica <span className="material-symbols-outlined text-lg text-primary">arrow_outward</span>
                                                 </span>
                                             </div>
                                         </div>
                                         <div className="flex justify-between items-start border-t border-secondary pt-6 mt-auto">
-                                            <div>
-                                                <span className="text-primary text-xs font-bold uppercase tracking-widest mb-2 block">{p.type}</span>
-                                                <h3 className="text-2xl md:text-3xl font-display font-bold text-secondary group-hover:text-primary transition-colors">{p.title}</h3>
-                                                <p className="text-gray-500 mt-2 text-sm">{p.loc}</p>
+                                            <div className="max-w-[85%]">
+                                                <span className="text-primary text-[10px] font-bold uppercase tracking-[0.2em] mb-3 block">{proj.subtitle}</span>
+                                                <h3 className="text-3xl md:text-4xl font-display font-bold text-secondary group-hover:text-primary transition-colors leading-tight">{proj.title}</h3>
+                                                <p className="text-gray-500 mt-3 text-sm font-light">{proj.desc}</p>
                                             </div>
                                             <div className="text-right hidden md:block">
-                                                <span className="text-4xl font-display font-light text-gray-200 group-hover:text-secondary transition-colors">{p.id}</span>
+                                                <span className="text-5xl font-display font-light text-gray-200 group-hover:text-secondary transition-colors">0{proj.id}</span>
                                             </div>
                                         </div>
                                     </article>
                                 ))}
                             </div>
                             <div className="mt-20 md:mt-32 text-center">
-                                <button className="bg-secondary text-white px-10 py-5 text-sm font-bold uppercase tracking-widest hover:bg-primary transition-colors duration-300">
-                                    Carregar més projectes
+                                <button className="bg-secondary text-white px-10 py-5 text-xs font-bold uppercase tracking-[0.2em] hover:bg-primary transition-colors duration-300">
+                                    Veure l'arxiu complet
                                 </button>
                             </div>
                         </div>
                     </section>
-                    <CallToAction />
-                    <Footer />
-                </div>
-            );
-        };
-
-        const ServicesPage = () => {
-            const services = [
-                {
-                    icon: "engineering",
-                    title: "Gestió de Projectes",
-                    desc: "Planificació i coordinació integral de totes les fases del projecte. Controlem costos, terminis i qualitat per assegurar l'èxit de l'obra des de l'inici fins al lliurament."
-                },
-                {
-                    icon: "construction",
-                    title: "Direcció d'Execució",
-                    desc: "Supervisió tècnica rigorosa a peu d'obra. Dirigim l'execució material controlant qualitativament i quantitativament la construcció i la qualitat d'allò edificat."
-                },
-                {
-                    icon: "home_work",
-                    title: "Inspeccions d'Edificis",
-                    desc: "Realització d'Inspeccions Tècniques d'Edificis (ITE), informes de patologies i diagnosi de l'estat de conservació per al manteniment preventiu i correctiu."
-                },
-                {
-                    icon: "energy_savings_leaf",
-                    title: "Certificacions Energètiques",
-                    desc: "Estudis d'eficiència energètica i tramitació de certificats obligatoris. Proposem millores per reduir el consum i augmentar el confort tèrmic de l'habitatge."
-                },
-                {
-                    icon: "fact_check",
-                    title: "Consultoria Tècnica",
-                    desc: "Assessorament professional per a particulars i empreses. Gestionem llicències, cèdules d'habitabilitat, legalitzacions i oferim suport en normatives urbanístiques."
-                }
-            ];
-
-            return (
-                <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
-                    <Navigation />
-                    <section className="relative w-full pt-32 pb-20 md:pt-48 md:pb-32 bg-secondary text-white">
-                        <div className="absolute inset-0 z-0 opacity-20">
-                            <img alt="Background architectural texture" className="w-full h-full object-cover grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7lpK9vj51dT4Eb-HRDdO_1ukGneT4BdFk5OuBn_odWXYxorNnI0NiwoASY3oIgmjk1dfS0tjlvvII5q0t_hLc49OwRXrAT2tkP4KECE-gbsi9-NELSm-nR8LIj5qZ_W9duR2IXH5uuKy2EIpe4TfBQLEAGyit-o1ukXfq-Uav2yYVZMYCOxo-11TF7wIj9qXpV4BEdHpP9ApI1PJ4pAg4DIJI3_lw4bwqOXuadAabkBYik91HgJwYUXPPsyrul_ZqrvmWB04hS64"/>
-                        </div>
-                        <div className="relative z-10 w-full max-w-[1400px] mx-auto px-6 md:px-12">
-                            <span className="text-primary font-bold tracking-[0.2em] uppercase text-sm mb-4 block">Arquitectura Tècnica</span>
-                            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-bold tracking-tight mb-8">
-                                Serveis <br/> <span className="text-transparent text-outline">Professionals</span>
-                            </h1>
-                            <p className="max-w-2xl text-gray-300 text-lg md:text-xl font-light leading-relaxed">
-                                Oferim solucions tècniques integrals per a l'edificació, garantint la qualitat, la seguretat i l'eficiència en cada fase del procés constructiu.
+                    <section className="w-full bg-off-white py-24 md:py-32 border-t border-gray-200">
+                        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12 flex flex-col items-center text-center">
+                            <h2 className="text-4xl md:text-6xl font-display font-bold text-secondary mb-8 leading-tight">
+                                El rigor tècnic al servei<br/>de la teva visió
+                            </h2>
+                            <p className="text-lg text-gray-500 mb-12 max-w-2xl font-light">
+                                A <strong className="text-secondary font-medium">CiC Gestió</strong> entenem l'obra com un procés precís on no hi ha lloc per a la improvisació. Contacta'ns per a una avaluació tècnica inicial.
                             </p>
+                            <Link to="/contact" className="inline-flex items-center gap-3 bg-primary text-white px-12 py-5 text-xs font-bold uppercase tracking-[0.2em] hover:bg-secondary transition-colors duration-300">
+                                Iniciar consulta
+                                <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                            </Link>
                         </div>
                     </section>
-                    <section className="w-full bg-light py-20 md:py-32">
-                        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-                                {services.map((s, idx) => (
-                                    <div key={idx} className="group border border-gray-100 p-8 md:p-10 hover:shadow-xl hover:border-primary/20 transition-all duration-300 bg-white flex flex-col items-start h-full">
-                                        <div className="w-16 h-16 bg-off-white text-secondary flex items-center justify-center mb-8 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                                            <span className="material-symbols-outlined text-3xl">{s.icon}</span>
-                                        </div>
-                                        <h3 className="text-2xl font-display font-bold text-secondary mb-4 group-hover:text-primary transition-colors">{s.title}</h3>
-                                        <p className="text-gray-600 leading-relaxed mb-6 flex-grow">{s.desc}</p>
-                                        <a href="#" className="inline-flex items-center text-sm font-bold uppercase tracking-wider text-primary border-b border-primary/30 pb-1 group-hover:border-primary transition-all">
-                                            Saber-ne més
-                                        </a>
-                                    </div>
-                                ))}
-                                <div className="group bg-secondary p-8 md:p-10 text-white flex flex-col items-start h-full justify-center relative overflow-hidden">
-                                    <div className="absolute inset-0 z-0 opacity-20">
-                                        <img alt="Pattern" className="w-full h-full object-cover grayscale mix-blend-overlay" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7lpK9vj51dT4Eb-HRDdO_1ukGneT4BdFk5OuBn_odWXYxorNnI0NiwoASY3oIgmjk1dfS0tjlvvII5q0t_hLc49OwRXrAT2tkP4KECE-gbsi9-NELSm-nR8LIj5qZ_W9duR2IXH5uuKy2EIpe4TfBQLEAGyit-o1ukXfq-Uav2yYVZMYCOxo-11TF7wIj9qXpV4BEdHpP9ApI1PJ4pAg4DIJI3_lw4bwqOXuadAabkBYik91HgJwYUXPPsyrul_ZqrvmWB04hS64"/>
-                                    </div>
-                                    <div className="relative z-10">
-                                        <h3 className="text-2xl font-display font-bold mb-4">Necessites assessorament?</h3>
-                                        <p className="text-gray-300 leading-relaxed mb-6">
-                                            Contacta amb nosaltres per resoldre qualsevol dubte tècnic sobre el teu projecte.
-                                        </p>
-                                        <Link to="/contact" className="bg-primary hover:bg-white hover:text-secondary text-white px-6 py-3 text-sm font-bold uppercase tracking-widest transition-colors duration-300 inline-block">
-                                            Contactar ara
-                                        </Link>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    <CallToAction />
                     <Footer />
-                </div>
-            );
-        };
-
-        const ContactPage = () => {
-            return (
-                <div className="flex flex-col min-h-screen">
-                    <Navigation />
-                    <main className="flex-grow pt-32 pb-20">
-                        <section className="w-full max-w-[1400px] mx-auto px-6 md:px-12 mb-16 md:mb-24">
-                            <div className="relative">
-                                <span className="text-primary font-bold tracking-widest uppercase text-xs mb-4 block">Parlem del teu projecte</span>
-                                <h1 className="text-6xl md:text-8xl lg:text-9xl font-display font-medium tracking-tight text-dark leading-[0.9]">
-                                    Contacte<span className="text-primary">.</span>
-                                </h1>
-                            </div>
-                        </section>
-                        <section className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24">
-                                <div className="lg:col-span-5 flex flex-col gap-12">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-8">
-                                        <div className="group">
-                                            <div className="flex items-start gap-4 mb-2">
-                                                <div className="p-3 bg-off-white border border-gray-100 group-hover:border-primary/30 transition-colors">
-                                                    <span className="material-symbols-outlined text-primary text-xl">location_on</span>
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-display font-bold text-lg text-dark mb-1">Oficina</h3>
-                                                    <address className="not-italic text-gray-600 leading-relaxed text-sm">
-                                                        Carrer Oriol Martorell 16<br/>
-                                                        17003 Girona
-                                                    </address>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="group">
-                                            <div className="flex items-start gap-4 mb-2">
-                                                <div className="p-3 bg-off-white border border-gray-100 group-hover:border-primary/30 transition-colors">
-                                                    <span className="material-symbols-outlined text-primary text-xl">call</span>
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-display font-bold text-lg text-dark mb-1">Contacte Directe</h3>
-                                                    <div className="flex flex-col gap-1 text-sm">
-                                                        <a href="tel:606352726" className="text-gray-600 hover:text-primary transition-colors">606 352 726</a>
-                                                        <a href="mailto:cabreramasferrer@gmail.com" className="text-gray-600 hover:text-primary transition-colors">cabreramasferrer@gmail.com</a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="group">
-                                            <div className="flex items-start gap-4 mb-2">
-                                                <div className="p-3 bg-off-white border border-gray-100 group-hover:border-primary/30 transition-colors">
-                                                    <span className="material-symbols-outlined text-primary text-xl">schedule</span>
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-display font-bold text-lg text-dark mb-1">Horari d'Atenció</h3>
-                                                    <div className="text-gray-600 text-sm leading-relaxed">
-                                                        <p><span className="font-bold w-12 inline-block">Dl-Dj:</span> 9:00 - 18:00</p>
-                                                        <p><span className="font-bold w-12 inline-block">Dv:</span> 9:00 - 14:00</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="w-full aspect-[4/3] bg-off-white relative overflow-hidden border border-gray-100 mt-4">
-                                        <iframe allowFullScreen="" className="grayscale-map opacity-80 hover:opacity-100 transition-opacity duration-500" height="100%" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=Carrer%20Oriol%20Martorell%2016%2C%2017003%20Girona&amp;t=&amp;z=15&amp;ie=UTF8&amp;iwloc=&amp;output=embed" style={{border:0}} width="100%">
-                                        </iframe>
-                                        <div className="absolute bottom-4 left-4 bg-white px-4 py-2 shadow-lg border border-gray-100 hidden md:block">
-                                            <span className="text-xs font-bold uppercase tracking-widest text-dark">Veure a Google Maps</span>
-                                        </div>
-                                    </div>
+                    
+                    {/* Projects Page Modal */}
+                    {selectedProject && (
+                        <div className="fixed inset-0 z-[60] flex justify-center items-center w-full h-full px-4 animate-fadeIn">
+                            <div className="absolute inset-0 bg-secondary/90 backdrop-blur-sm cursor-pointer transition-all" onClick={() => setSelectedProject(null)}></div>
+                            <div className="relative bg-white w-full max-w-6xl max-h-[90vh] overflow-y-auto modal-content shadow-2xl flex flex-col md:flex-row z-10 animate-fadeIn">
+                                <button className="md:hidden absolute top-4 right-4 z-50 p-2 bg-white rounded-none text-secondary shadow-lg cursor-pointer" onClick={() => setSelectedProject(null)}>
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                                <div className="w-full md:w-5/12 h-64 md:h-auto sticky top-0 md:relative">
+                                    <img alt={selectedProject.title} className="w-full h-full object-cover" src={selectedProject.image}/>
                                 </div>
-                                <div className="lg:col-span-7 bg-off-white p-8 md:p-12 lg:p-16 border border-gray-100">
-                                    <h2 className="text-3xl md:text-4xl font-display font-bold text-dark mb-2">Envia'ns un missatge</h2>
-                                    <p className="text-gray-600 mb-10">Omple el formulari i ens posarem en contacte amb tu el més aviat possible.</p>
-                                    <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-bold uppercase tracking-widest text-gray-500" htmlFor="nom">Nom Complet *</label>
-                                                <input className="w-full bg-transparent border-0 border-b-2 border-gray-300 px-0 py-2 focus:ring-0 focus:border-primary transition-colors text-dark placeholder-gray-400" id="nom" name="nom" placeholder="El teu nom" required type="text"/>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-bold uppercase tracking-widest text-gray-500" htmlFor="telefon">Telèfon</label>
-                                                <input className="w-full bg-transparent border-0 border-b-2 border-gray-300 px-0 py-2 focus:ring-0 focus:border-primary transition-colors text-dark placeholder-gray-400" id="telefon" name="telefon" placeholder="+34 600 000 000" type="tel"/>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-bold uppercase tracking-widest text-gray-500" htmlFor="email">Correu Electrònic *</label>
-                                            <input className="w-full bg-transparent border-0 border-b-2 border-gray-300 px-0 py-2 focus:ring-0 focus:border-primary transition-colors text-dark placeholder-gray-400" id="email" name="email" placeholder="nom@exemple.com" required type="email"/>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-bold uppercase tracking-widest text-gray-500" htmlFor="assumpte">Assumpte</label>
-                                            <select className="w-full bg-transparent border-0 border-b-2 border-gray-300 px-0 py-2 focus:ring-0 focus:border-primary transition-colors text-dark" id="assumpte" name="assumpte" defaultValue="">
-                                                <option disabled value="">Selecciona un motiu</option>
-                                                <option value="projecte">Nou Projecte</option>
-                                                <option value="reforma">Reforma / Rehabilitació</option>
-                                                <option value="certificat">Certificat / Informe Tècnic</option>
-                                                <option value="altres">Altres consultes</option>
-                                            </select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-bold uppercase tracking-widest text-gray-500" htmlFor="missatge">Missatge *</label>
-                                            <textarea className="w-full bg-transparent border-0 border-b-2 border-gray-300 px-0 py-2 focus:ring-0 focus:border-primary transition-colors text-dark placeholder-gray-400 resize-none" id="missatge" name="missatge" placeholder="Explica'ns breument què necessites..." required rows="4"></textarea>
-                                        </div>
-                                        <div className="pt-4 flex items-center justify-between">
-                                            <div className="flex items-start gap-2">
-                                                <input className="mt-1 border-gray-300 text-primary focus:ring-primary rounded-none" id="privacitat" required type="checkbox"/>
-                                                <label className="text-xs text-gray-500" htmlFor="privacitat">He llegit i accepto la <a className="underline hover:text-dark" href="#">política de privacitat</a>.</label>
-                                            </div>
-                                            <button className="bg-dark text-white px-8 py-4 text-sm font-bold uppercase tracking-widest hover:bg-primary transition-colors duration-300 flex items-center gap-2" type="submit">
-                                                Enviar
-                                                <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                                <div className="w-full md:w-7/12 p-8 md:p-16 bg-white flex flex-col justify-between">
+                                    <div>
+                                        <div className="flex justify-between items-start mb-8">
+                                            <span className="text-primary text-xs font-bold uppercase tracking-[0.2em] border-l-2 border-primary pl-3">Fitxa Tècnica</span>
+                                            <button className="hidden md:block cursor-pointer hover:text-primary transition-colors" onClick={() => setSelectedProject(null)}>
+                                                <span className="material-symbols-outlined text-4xl">close</span>
                                             </button>
                                         </div>
-                                    </form>
+                                        <h3 className="text-4xl md:text-5xl font-display font-bold text-secondary mb-8 leading-none">{selectedProject.title}</h3>
+                                        <div className="space-y-6 text-gray-600 leading-relaxed font-light text-lg">
+                                            <p>{selectedProject.details.fullDesc}</p>
+                                            <p>{selectedProject.details.extraDesc}</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-12 pt-8 border-t border-gray-100">
+                                        <dl className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-4 text-sm">
+                                            {Object.entries(selectedProject.details.meta).map(([key, value]) => (
+                                                <div key={key}>
+                                                    <dt className="text-gray-400 uppercase text-[10px] tracking-widest mb-2">{key}</dt>
+                                                    <dd className="font-bold text-secondary">{value}</dd>
+                                                </div>
+                                            ))}
+                                        </dl>
+                                    </div>
                                 </div>
                             </div>
-                        </section>
-                    </main>
-                    <Footer />
+                        </div>
+                    )}
                 </div>
             );
         };
 
-        // --- App ---
+        // Screen 4: Contact Page
+        const ContactPage = () => (
+            <div className="bg-light text-secondary font-body selection:bg-primary selection:text-white flex flex-col min-h-screen">
+                <Navigation />
+                <main className="flex-grow pt-32 pb-20">
+                    <section className="w-full max-w-[1400px] mx-auto px-6 md:px-12 mb-16 md:mb-20">
+                        <div className="relative">
+                            <span className="text-primary font-bold tracking-widest uppercase text-xs mb-4 block">Parlem del teu projecte</span>
+                            <h1 className="text-6xl md:text-8xl lg:text-9xl font-display font-medium tracking-tight text-dark leading-[0.9]">
+                                Contacte<span className="text-primary">.</span>
+                            </h1>
+                        </div>
+                    </section>
+                    <section className="w-full max-w-[1400px] mx-auto px-6 md:px-12">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+                            <div className="lg:col-span-5 flex flex-col gap-10">
+                                <div className="prose prose-lg">
+                                    <p className="text-gray-600 text-lg leading-relaxed max-w-md">
+                                        Si tens un projecte en ment o necessites assessorament tècnic, no dubtis en contactar amb nosaltres a través de qualsevol d'aquests canals.
+                                    </p>
+                                </div>
+                                <div className="space-y-10">
+                                    <div className="group">
+                                        <div className="flex items-start gap-5">
+                                            <div className="p-4 bg-off-white border border-gray-100 group-hover:bg-primary/5 group-hover:border-primary/30 transition-all duration-300">
+                                                <span className="material-symbols-outlined text-primary text-2xl">location_on</span>
+                                            </div>
+                                            <div>
+                                                <h3 className="font-display font-bold text-xl text-dark mb-2 uppercase tracking-wide">Oficina</h3>
+                                                <address className="not-italic text-gray-600 leading-relaxed text-base">
+                                                    Carrer Oriol Martorell 16<br/>
+                                                    17003 Girona
+                                                </address>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="group">
+                                        <div className="flex items-start gap-5">
+                                            <div className="p-4 bg-off-white border border-gray-100 group-hover:bg-primary/5 group-hover:border-primary/30 transition-all duration-300">
+                                                <span className="material-symbols-outlined text-primary text-2xl">alternate_email</span>
+                                            </div>
+                                            <div>
+                                                <h3 className="font-display font-bold text-xl text-dark mb-2 uppercase tracking-wide">Contacte Directe</h3>
+                                                <div className="flex flex-col gap-2 text-base">
+                                                    <a className="text-gray-600 hover:text-primary transition-colors flex items-center gap-2" href="tel:606352726">
+                                                        <span className="font-medium">606 352 726</span>
+                                                    </a>
+                                                    <a className="text-gray-600 hover:text-primary transition-colors font-medium" href="mailto:cabreramasferrer@gmail.com">
+                                                        cabreramasferrer@gmail.com
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="group">
+                                        <div className="flex items-start gap-5">
+                                            <div className="p-4 bg-off-white border border-gray-100 group-hover:bg-primary/5 group-hover:border-primary/30 transition-all duration-300">
+                                                <span className="material-symbols-outlined text-primary text-2xl">schedule</span>
+                                            </div>
+                                            <div>
+                                                <h3 className="font-display font-bold text-xl text-dark mb-2 uppercase tracking-wide">Horari d'Atenció</h3>
+                                                <div className="text-gray-600 text-base leading-relaxed">
+                                                    <p className="flex justify-between w-48"><span className="font-bold">Dl - Dj:</span> 9:00 - 18:00</p>
+                                                    <p className="flex justify-between w-48"><span className="font-bold">Divendres:</span> 9:00 - 14:00</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="lg:col-span-7">
+                                <div className="w-full aspect-[4/3] lg:aspect-square bg-off-white relative overflow-hidden border border-gray-100 shadow-sm">
+                                    <iframe allowFullScreen className="grayscale-map opacity-90 hover:opacity-100 transition-opacity duration-500 w-full h-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=Carrer%20Oriol%20Martorell%2016%2C%2017003%20Girona&amp;t=&amp;z=16&amp;ie=UTF8&amp;iwloc=&amp;output=embed">
+                                    </iframe>
+                                    <a className="absolute bottom-6 left-6 bg-dark text-white px-5 py-3 text-xs font-bold uppercase tracking-widest hover:bg-primary transition-colors duration-300" href="https://www.google.com/maps/search/?api=1&amp;query=Carrer+Oriol+Martorell+16+17003+Girona" target="_blank">
+                                        Obrir a Google Maps
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+                <Footer />
+            </div>
+        );
+
+        // --- Main App Component ---
+
         const App = () => {
             return (
                 <MemoryRouter>
+                    <ScrollToTop />
                     <Routes>
                         <Route path="/" element={<HomePage />} />
-                        <Route path="/projects" element={<ProjectsPage />} />
                         <Route path="/services" element={<ServicesPage />} />
+                        <Route path="/projects" element={<ProjectsPage />} />
                         <Route path="/contact" element={<ContactPage />} />
                     </Routes>
                 </MemoryRouter>
